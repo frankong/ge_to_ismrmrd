@@ -27,3 +27,7 @@ tags
 
 *~
 *swp
+
+# P-files for test branches
+P*.7
+
