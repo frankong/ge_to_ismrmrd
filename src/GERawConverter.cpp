@@ -178,7 +178,7 @@ namespace GeToIsmrmrd {
     if (patientModule->Gender().empty())
 	    subjectInformation.patientGender = "N/A";
     else
-	    subjectInformation.patientGener = patientModule->Gender().c_str();
+	    subjectInformation.patientGender = patientModule->Gender().c_str();
     ismrmrd_header.subjectInformation = subjectInformation;
 
     m_log << "  Loading study information..." << std::endl;
