@@ -543,45 +543,54 @@ namespace GeToIsmrmrd {
     unsigned int numChannels = (unsigned int) m_processingControl->Value<int>("NumChannels");
     unsigned int numEchoes = (unsigned int) m_processingControl->Value<int>("NumEchoes");
     unsigned int numPhases = (unsigned int) m_processingControl->Value<int>("NumPhases");
+    bool is3D = m_processingControl->Value<bool>("Is3DAcquisition");
 
-    size_t numVolumes = 0;
-
+    size_t i_acquisition = 0;
+    // Pfile is stored as (readout, views, echoes, slice, channel)
+#pragma omp parallel for collapse(4)
     for (unsigned int i_phase = 0; i_phase < numPhases; i_phase++) {
-      for (unsigned int i_echo = 0; i_echo < numEchoes; i_echo++) {
-        ISMRMRD::Image<std::complex<float> > kspace(lenFrame, numViews, numSlices, numChannels);
-        kspace.setImageType(ISMRMRD::ISMRMRD_ImageTypes::ISMRMRD_IMTYPE_COMPLEX);
-        kspace.setContrast(i_echo);
-        kspace.setPhase(i_phase);
-        // ISMRMRD::ImageHeader header = kspace.getHead();
+	    for (unsigned int i_echo = 0; i_echo < numEchoes; i_echo++) {
+		    for (unsigned int i_slice = 0; i_slice < numSlices; i_slice++) {
+			    for (unsigned int i_view = 0; i_view < numViews; i_view++) {
+				    
+				    ISMRMRD::Acquisition ismrmrd_acq;
+				    ismrmrd_acq.resize(lenFrame, numChannels);
+				    
+				    ismrmrd_acq.idx().contrast = i_echo;
+				    ismrmrd_acq.idx().phase = i_phase;
+				    ismrmrd_acq.idx().kspace_encode_step_1 = i_view;
+				    if (is3D) {
+					    ismrmrd_acq.idx().kspace_encode_step_2 = i_slice;
+					    ismrmrd_acq.idx().slice = 0;
+				    }
+				    else {
+					    ismrmrd_acq.idx().kspace_encode_step_2 = 0;
+					    ismrmrd_acq.idx().slice = i_slice;
+				    }
+				    ismrmrd_acq.scan_counter() = i_acquisition++;
+				    ismrmrd_acq.discard_pre() = 0;
+				    ismrmrd_acq.discard_post() = 0;
 
-        // Pfile is stored as (readout, views, echoes, slice, channel)
-        m_log << "Reading volume (Echo: " << i_echo << ", Phase: " << i_phase << ")..." << std::endl;
-#pragma omp parallel for collapse(2)
-        for (unsigned int i_channel = 0; i_channel < numChannels; i_channel++) {
-          for (unsigned int i_slice = 0; i_slice < numSlices; i_slice++) {
-            MDArray::ComplexFloatMatrix kspaceFromFile;
-            if (m_pfile->IsZEncoded()) {
-              auto kSpaceRead = m_pfile->KSpaceData<float>(
-                GERecon::Legacy::Pfile::PassSlicePair(i_phase, i_slice), i_echo, i_channel);
-              kspaceFromFile.reference(kSpaceRead);
-            }
-            else {
-              auto kSpaceRead = m_pfile->KSpaceData<float>(i_slice, i_echo, i_channel, i_phase);
-              kspaceFromFile.reference(kSpaceRead);
-            }
+				    for (unsigned int i_channel = 0; i_channel < numChannels; i_channel++) {
+					    if (m_pfile->IsZEncoded())
+						    auto kSpaceRead = m_pfile->KSpaceData<float>(
+							    GERecon::Legacy::Pfile::PassSlicePair(i_phase, i_slice), i_echo, i_channel);
+					    else
+						    auto kSpaceRead = m_pfile->KSpaceData<float>(i_slice, i_echo, i_channel, i_phase);
 
-            for (unsigned int i_view = 0; i_view < numViews; i_view++) {
-              for (unsigned int i = 0 ; i < lenFrame ; i++)
-                kspace(i, i_view, i_slice, i_channel) = kspaceFromFile((int)i, (int)i_view); // * recWeight(i_channel);
-            } // for (i_view)
-          } // for (i_slice)
-        } // for (i_channel)
-        d.appendImage("kspace", kspace);
-        numVolumes++;
-      } // for (i_echo)
+					    for (unsigned int i = 0 ; i < lenFrame ; i++)
+						    ismrmrd_acq.data(i, i_channel) = kspaceRead((int) i, (int) i_view);
+					    
+					    d.appendAcquisition(ismrmrd_acq);
+					    
+				    } // for (i_channel)
+			    } // for (i_view)
+		    } // for (i_slice)
+	    } // for (i_echo)
     } // for (i_phase)
 
-    return numVolumes;
+    return i_acquisition;
+    
   } // function GERawConverter::appendAcquisitionsFromPfile()
 
 
