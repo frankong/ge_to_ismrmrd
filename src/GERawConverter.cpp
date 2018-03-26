@@ -175,9 +175,7 @@ namespace GeToIsmrmrd {
     subjectInformation.patientWeight_kg = std::stof(patientStudyModule->Weight());
     subjectInformation.patientID = patientModule->ID().c_str();
     subjectInformation.patientBirthdate = convert_date(patientModule->Birthdate()).c_str();
-    if (patientModule->Gender().empty())
-	    subjectInformation.patientGender = "N/A";
-    else
+    if (!patientModule->Gender().empty())
 	    subjectInformation.patientGender = patientModule->Gender().c_str();
     ismrmrd_header.subjectInformation = subjectInformation;
 
@@ -534,20 +532,15 @@ namespace GeToIsmrmrd {
     if (m_isScanArchive)
       return 0;
 
-    //const GERecon::Control::ProcessingControlPointer processingControl(m_pfile->CreateOrchestraProcessingControl());
-    //auto lxDownloadDataPtr =  boost::dynamic_pointer_cast<GERecon::Legacy::LxDownloadData>(m_downloadDataPtr);
-
     unsigned int lenFrame = (unsigned int) m_processingControl->Value<int>("AcquiredXRes");
     unsigned int numViews = (unsigned int) m_processingControl->Value<int>("AcquiredYRes");
     unsigned int numSlices = (unsigned int) m_processingControl->Value<int>("AcquiredZRes");
     unsigned int numChannels = (unsigned int) m_processingControl->Value<int>("NumChannels");
     unsigned int numEchoes = (unsigned int) m_processingControl->Value<int>("NumEchoes");
     unsigned int numPhases = (unsigned int) m_processingControl->Value<int>("NumPhases");
-    bool is3D = m_processingControl->Value<bool>("Is3DAcquisition");
 
     size_t i_acquisition = 0;
     // Pfile is stored as (readout, views, echoes, slice, channel)
-#pragma omp parallel for collapse(4)
     for (unsigned int i_phase = 0; i_phase < numPhases; i_phase++) {
 	    for (unsigned int i_echo = 0; i_echo < numEchoes; i_echo++) {
 		    for (unsigned int i_slice = 0; i_slice < numSlices; i_slice++) {
@@ -559,7 +552,7 @@ namespace GeToIsmrmrd {
 				    ismrmrd_acq.idx().contrast = i_echo;
 				    ismrmrd_acq.idx().phase = i_phase;
 				    ismrmrd_acq.idx().kspace_encode_step_1 = i_view;
-				    if (is3D && m_pfile->IsZEncoded()) {
+				    if (m_pfile->IsZEncoded()) {
 					    ismrmrd_acq.idx().kspace_encode_step_2 = i_slice;
 					    ismrmrd_acq.idx().slice = 0;
 				    }
@@ -571,6 +564,7 @@ namespace GeToIsmrmrd {
 				    ismrmrd_acq.discard_pre() = 0;
 				    ismrmrd_acq.discard_post() = 0;
 
+				    bool all_zeros = true;
 				    for (unsigned int i_channel = 0; i_channel < numChannels; i_channel++) {
 					    MDArray::ComplexFloatMatrix kspaceFromFile;
 					    if (m_pfile->IsZEncoded()) {
@@ -583,12 +577,17 @@ namespace GeToIsmrmrd {
 						    kspaceFromFile.reference(kSpaceRead);
 					    }
 
-					    for (unsigned int i = 0 ; i < lenFrame ; i++)
-						    ismrmrd_acq.data(i, i_channel) = kspaceFromFile((int) i, (int) i_view);
-					    
-					    d.appendAcquisition(ismrmrd_acq);
+					    for (unsigned int i = 0 ; i < lenFrame ; i++) {
+						    auto kSpaceValue = kspaceFromFile((int) i, (int) i_view);
+						    ismrmrd_acq.data(i, i_channel) = kSpaceValue;
+						    all_zeros = all_zeros && (kSpaceValue.real() == 0) && (kSpaceValue.imag() == 0);
+					    }
 					    
 				    } // for (i_channel)
+				    
+				    // Only append when not all k-space points are zero
+				    if (!all_zeros)
+					    d.appendAcquisition(ismrmrd_acq);
 			    } // for (i_view)
 		    } // for (i_slice)
 	    } // for (i_echo)
