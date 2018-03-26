@@ -559,7 +559,7 @@ namespace GeToIsmrmrd {
 				    ismrmrd_acq.idx().contrast = i_echo;
 				    ismrmrd_acq.idx().phase = i_phase;
 				    ismrmrd_acq.idx().kspace_encode_step_1 = i_view;
-				    if (is3D) {
+				    if (is3D && m_pfile->IsZEncoded()) {
 					    ismrmrd_acq.idx().kspace_encode_step_2 = i_slice;
 					    ismrmrd_acq.idx().slice = 0;
 				    }
@@ -572,14 +572,19 @@ namespace GeToIsmrmrd {
 				    ismrmrd_acq.discard_post() = 0;
 
 				    for (unsigned int i_channel = 0; i_channel < numChannels; i_channel++) {
-					    if (m_pfile->IsZEncoded())
+					    MDArray::ComplexFloatMatrix kspaceFromFile;
+					    if (m_pfile->IsZEncoded()) {
 						    auto kSpaceRead = m_pfile->KSpaceData<float>(
 							    GERecon::Legacy::Pfile::PassSlicePair(i_phase, i_slice), i_echo, i_channel);
-					    else
+						    kspaceFromFile.reference(kSpaceRead);
+					    }
+					    else {
 						    auto kSpaceRead = m_pfile->KSpaceData<float>(i_slice, i_echo, i_channel, i_phase);
+						    kspaceFromFile.reference(kSpaceRead);
+					    }
 
 					    for (unsigned int i = 0 ; i < lenFrame ; i++)
-						    ismrmrd_acq.data(i, i_channel) = kspaceRead((int) i, (int) i_view);
+						    ismrmrd_acq.data(i, i_channel) = kspaceFromFile((int) i, (int) i_view);
 					    
 					    d.appendAcquisition(ismrmrd_acq);
 					    
