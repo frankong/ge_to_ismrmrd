@@ -293,12 +293,12 @@ namespace GeToIsmrmrd {
     encoding.encodingLimits.kspace_encoding_step_2 = ISMRMRD::Limit(0, encoding.encodedSpace.matrixSize.z, encoding.encodedSpace.matrixSize.z / 2);
     if (!m_pfile->IsZEncoded()) {
 	    unsigned short numSlices = (unsigned short) m_processingControl->Value<int>("NumSlices");
-	    encoding.encodingLimits.slice = ISMRMRD::Limit(0, numSlices, numSlices / 2);
+	    encoding.encodingLimits.slice = ISMRMRD::Limit(0, numSlices - 1, numSlices / 2);
     }
     unsigned short numEchoes = (unsigned short) m_processingControl->Value<int>("NumEchoes");
-    encoding.encodingLimits.contrast = ISMRMRD::Limit(0, numEchoes, numEchoes / 2);
+    encoding.encodingLimits.contrast = ISMRMRD::Limit(0, numEchoes - 1, numEchoes / 2);
     unsigned short numPhases = (unsigned short) m_processingControl->Value<int>("NumPhases");
-    encoding.encodingLimits.phase = ISMRMRD::Limit(0, numPhases, numPhases / 2);
+    encoding.encodingLimits.phase = ISMRMRD::Limit(0, numPhases - 1, numPhases / 2);
     // encoding.parallelImaging
     ismrmrd_header.encoding.push_back(encoding);
 
