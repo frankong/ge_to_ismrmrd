@@ -196,7 +196,28 @@ namespace GeToIsmrmrd {
     // measurementInformation.measurementID = lxDownloadDataPtr->SeriesNumber();
     measurementInformation.seriesDate = convert_date(seriesModule->Date()).c_str();
     measurementInformation.seriesTime = convert_time(seriesModule->Time()).c_str();
-    measurementInformation.patientPosition = seriesModule->PpsDescription().c_str(); //?
+    
+    GERecon::PatientPosition patientPosition = static_cast<GERecon::PatientPosition>(m_processingControl->Value<int>("PatientPosition"));
+    
+    switch(patientPosition)
+    {
+    case GERecon::PatientPosition::Supine:
+	    measurementInformation.patientPosition = "HFS";
+            break;
+    case GERecon::PatientPosition::Prone:
+	    measurementInformation.patientPosition = "HFP";
+            break;
+    case GERecon::PatientPosition::LeftDescending:
+	    measurementInformation.patientPosition = "HFDL";
+            break;
+    case GERecon::PatientPosition::RightDescending:
+	    measurementInformation.patientPosition = "HFDR";
+            break;
+    default:
+	    measurementInformation.patientPosition = "HFS";
+            break;
+    }
+    
     measurementInformation.initialSeriesNumber = lxDownloadDataPtr->SeriesNumber();
     measurementInformation.protocolName = seriesModule->ProtocolName().c_str();
     measurementInformation.seriesDescription = seriesModule->SeriesDescription().c_str();
@@ -219,7 +240,7 @@ namespace GeToIsmrmrd {
     acquisitionSystemInformation.receiverChannels = m_processingControl->Value<int>("NumChannels");
     ISMRMRD::CoilLabel coilLabel;
     // TODO: Will have problems converting int to short
-    coilLabel.coilNumber = (unsigned short)m_processingControl->Value<int>("CoilConfigUID");
+    coilLabel.coilNumber = (unsigned short) m_processingControl->Value<int>("CoilConfigUID");
     coilLabel.coilName = lxDownloadDataPtr->Coil().c_str();
     acquisitionSystemInformation.coilLabel.push_back(coilLabel);
     acquisitionSystemInformation.institutionName = equipmentModule->Institution().c_str();
