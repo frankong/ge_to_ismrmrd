@@ -195,7 +195,7 @@ namespace GeToIsmrmrd {
     ISMRMRD::MeasurementInformation measurementInformation;
     // measurementInformation.measurementID = lxDownloadDataPtr->SeriesNumber();
     measurementInformation.seriesDate = convert_date(seriesModule->Date()).c_str();
-    measurementInformation.seriesTime = convert_date(seriesModule->Time()).c_str();
+    measurementInformation.seriesTime = convert_time(seriesModule->Time()).c_str();
     measurementInformation.patientPosition = seriesModule->PpsDescription().c_str(); //?
     measurementInformation.initialSeriesNumber = lxDownloadDataPtr->SeriesNumber();
     measurementInformation.protocolName = seriesModule->ProtocolName().c_str();
