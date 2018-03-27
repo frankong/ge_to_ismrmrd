@@ -269,7 +269,10 @@ namespace GeToIsmrmrd {
     short zipFactor = rdbHeader.rdb_hdr_zip_factor;
     encoding.encodedSpace.matrixSize.x = acquiredXRes;
     encoding.encodedSpace.matrixSize.y = acquiredYRes;
-    encoding.encodedSpace.matrixSize.z = acquiredZRes;
+    if (m_pfile->IsZEncoded())
+	    encoding.encodedSpace.matrixSize.z = acquiredZRes;
+    else
+	    encoding.encodedSpace.matrixSize.z = 1;
     encoding.encodedSpace.fieldOfView_mm.x = transformXRes * pixelSizeX;
     encoding.encodedSpace.fieldOfView_mm.y = transformYRes * pixelSizeY;
     if (is3D)
@@ -287,7 +290,11 @@ namespace GeToIsmrmrd {
       encoding.reconSpace.fieldOfView_mm.z = pixelSizeZ;
     encoding.trajectory = ISMRMRD::TrajectoryType::CARTESIAN;
     encoding.encodingLimits.kspace_encoding_step_1 = ISMRMRD::Limit(0, acquiredYRes, acquiredYRes / 2);
-    encoding.encodingLimits.kspace_encoding_step_2 = ISMRMRD::Limit(0, acquiredZRes, acquiredZRes / 2);
+    encoding.encodingLimits.kspace_encoding_step_2 = ISMRMRD::Limit(0, encoding.encodedSpace.matrixSize.z, encoding.encodedSpace.matrixSize.z / 2);
+    if (!m_pfile->IsZEncoded()) {
+	    unsigned short numSlices = (unsigned short) m_processingControl->Value<int>("NumSlices");
+	    encoding.encodingLimits.slice = ISMRMRD::Limit(0, numSlices, numSlices / 2);
+    }
     unsigned short numEchoes = (unsigned short) m_processingControl->Value<int>("NumEchoes");
     encoding.encodingLimits.contrast = ISMRMRD::Limit(0, numEchoes, numEchoes / 2);
     unsigned short numPhases = (unsigned short) m_processingControl->Value<int>("NumPhases");
