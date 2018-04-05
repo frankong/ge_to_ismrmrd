@@ -47,7 +47,7 @@ namespace GeToIsmrmrd {
   std::string convert_date(const std::string& date_str) {
     if (date_str.length() == 8) {
       return date_str.substr(0, 4) + "-"
-        + date_str.substr(5, 2) + "-" + date_str.substr(6, 2);
+        + date_str.substr(4, 2) + "-" + date_str.substr(6, 2);
     } else
       return date_str;
   }
